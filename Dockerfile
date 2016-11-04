@@ -1,4 +1,4 @@
-FROM node:0.10
+FROM library/node
 
 # Install Bower & Grunt
 RUN npm install -g bower grunt-cli \
@@ -38,6 +38,7 @@ RUN set -ex \
 	&& make -j"$(nproc)" \
 	&& make install \
 	&& apt-get purge -y --auto-remove $buildDeps \
+	&& apt-get autoremove -y && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
 	&& gem update --system $RUBYGEMS_VERSION \
 	&& rm -r /usr/src/ruby
 
@@ -56,9 +57,20 @@ ENV PATH $BUNDLE_BIN:$PATH
 RUN mkdir -p "$GEM_HOME" "$BUNDLE_BIN" \
 	&& chmod 777 "$GEM_HOME" "$BUNDLE_BIN"
 
-RUN gem install compass scss-lint
-RUN npm update npm -g \
- && npm install phantomjs-prebuilt -g
+RUN wget --header "Cookie: oraclelicense=accept-securebackup-cookie" http://download.oracle.com/otn-pub/java/jdk/8u74-b02/jdk-8u74-linux-x64.tar.gz \
+ && mkdir /opt/jdk \
+ && tar -zxf jdk-8u74-linux-x64.tar.gz -C /opt/jdk \
+ && rm jdk-8u74-linux-x64.tar.gz
+
+RUN update-alternatives --install /usr/bin/java java /opt/jdk/jdk1.8.0_74/bin/java 100 \
+ && update-alternatives --install /usr/bin/javac javac /opt/jdk/jdk1.8.0_74/bin/javac 100
+
+RUN gem install compass scss-lint wraith
+RUN npm install phantomjs-prebuilt -g
+RUN npm install -g protractor
+RUN npm install -g selenium
+RUN npm install -g webdriver-manager
+
 
 # Define working directory.
 WORKDIR /data
