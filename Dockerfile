@@ -1,4 +1,4 @@
-FROM library/node
+FROM node:7.0
 
 # Install Bower & Grunt
 RUN npm install -g bower grunt-cli \
@@ -57,13 +57,13 @@ ENV PATH $BUNDLE_BIN:$PATH
 RUN mkdir -p "$GEM_HOME" "$BUNDLE_BIN" \
 	&& chmod 777 "$GEM_HOME" "$BUNDLE_BIN"
 
-RUN wget --header "Cookie: oraclelicense=accept-securebackup-cookie" http://download.oracle.com/otn-pub/java/jdk/8u74-b02/jdk-8u74-linux-x64.tar.gz \
+RUN wget --header "Cookie: oraclelicense=accept-securebackup-cookie" http://download.oracle.com/otn-pub/java/jdk/8u112-b15/jdk-8u112-linux-x64.tar.gz \
  && mkdir /opt/jdk \
- && tar -zxf jdk-8u74-linux-x64.tar.gz -C /opt/jdk \
- && rm jdk-8u74-linux-x64.tar.gz
+ && tar -zxf jdk-8u112-linux-x64.tar.gz -C /opt/jdk \
+ && rm jdk-8u112-linux-x64.tar.gz
 
-RUN update-alternatives --install /usr/bin/java java /opt/jdk/jdk1.8.0_74/bin/java 100 \
- && update-alternatives --install /usr/bin/javac javac /opt/jdk/jdk1.8.0_74/bin/javac 100
+RUN update-alternatives --install /usr/bin/java java /opt/jdk/jdk1.8.0_112/bin/java 100 \
+ && update-alternatives --install /usr/bin/javac javac /opt/jdk/jdk1.8.0_112/bin/javac 100
 
 RUN gem install compass scss-lint wraith
 RUN npm install phantomjs-prebuilt -g
@@ -71,6 +71,14 @@ RUN npm install -g protractor
 RUN npm install -g selenium
 RUN npm install -g webdriver-manager
 
+RUN mkdir -p /tmp/certs \
+    && cd /tmp/certs/ \
+    && curl -O https://www.startssl.com/certs/ca.crt
+    && curl -O https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem
+
+RUN /opt/jdk/jdk1.8.0_112/bin/keytool -storepasswd -new mysecretpassword -keystore /opt/jdk/jdk1.8.0_112/jre/lib/security/cacerts -storepass changeit && \
+    echo "yes" | /opt/jdk/jdk1.8.0_112/bin/keytool -import -trustcacerts -file /tmp/certs/ca.crt -alias starssl-ca -keystore /opt/jdk/jdk1.8.0_112/jre/lib/security/cacerts -storepass mysecretpassword && \
+    echo "yes" | /opt/jdk/jdk1.8.0_112/bin/keytool -import -trustcacerts -file /tmp/certs/lets-encrypt-x3-cross-signed.pem -alias letsencrypt-ca -keystore /opt/jdk/jdk1.8.0_112/jre/lib/security/cacerts -storepass mysecretpassword
 
 # Define working directory.
 WORKDIR /data
