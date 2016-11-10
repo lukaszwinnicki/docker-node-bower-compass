@@ -73,7 +73,7 @@ RUN npm install -g webdriver-manager
 
 RUN mkdir -p /tmp/certs \
     && cd /tmp/certs/ \
-    && curl -O https://www.startssl.com/certs/ca.crt
+    && curl -O https://www.startssl.com/certs/ca.crt \
     && curl -O https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem
 
 RUN /opt/jdk/jdk1.8.0_112/bin/keytool -storepasswd -new mysecretpassword -keystore /opt/jdk/jdk1.8.0_112/jre/lib/security/cacerts -storepass changeit && \
