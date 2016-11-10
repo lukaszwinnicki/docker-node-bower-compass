@@ -1,7 +1,7 @@
 FROM node:7.0
 
 # Install Bower & Grunt
-RUN npm install -g bower grunt-cli \
+RUN npm install -g yarn bower grunt-cli \
  && echo '{ "allow_root": true }' > /root/.bowerrc
 
 RUN mkdir -p /usr/local/etc \
