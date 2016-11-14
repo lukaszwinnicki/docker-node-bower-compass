@@ -78,4 +78,9 @@ RUN npm install -g yarn bower grunt-cli phantomjs-prebuilt protractor selenium w
 # Define working directory.
 WORKDIR /data
 
+ADD entrypoint.sh /entrypoint.sh
+RUN chmod a+x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+
 CMD ["bash"]
