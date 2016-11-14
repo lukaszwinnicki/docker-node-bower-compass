@@ -1,19 +1,15 @@
 FROM node:7.0
 
-# Install Bower & Grunt
-RUN npm install -g yarn bower grunt-cli \
- && echo '{ "allow_root": true }' > /root/.bowerrc
-
 RUN mkdir -p /usr/local/etc \
 	&& { \
 		echo 'install: --no-document'; \
 		echo 'update: --no-document'; \
 	} >> /usr/local/etc/gemrc
 
-ENV RUBY_MAJOR 2.1
-ENV RUBY_VERSION 2.1.8
-ENV RUBY_DOWNLOAD_SHA256 afd832b8d5ecb2e3e1477ec6a9408fdf9898ee73e4c5df17a2b2cb36bd1c355d
-ENV RUBYGEMS_VERSION 2.6.0
+ENV RUBY_MAJOR 2.3
+ENV RUBY_VERSION 2.3.1
+ENV RUBY_DOWNLOAD_SHA256 b87c738cb2032bf4920fef8e3864dc5cf8eae9d89d8d523ce0236945c5797dcd
+ENV RUBYGEMS_VERSION 2.6.8
 
 # some of ruby's build scripts are written in ruby
 # we purge this later to make sure our final image uses what we just built
@@ -24,7 +20,7 @@ RUN set -ex \
 		ruby \
 	' \
 	&& apt-get update \
-	&& apt-get install -y --no-install-recommends $buildDeps \
+	&& apt-get install -y --no-install-recommends $buildDeps xvfb chromium libgconf-2-4 \
 	&& rm -rf /var/lib/apt/lists/* \
 	&& curl -fSL -o ruby.tar.gz "http://cache.ruby-lang.org/pub/ruby/$RUBY_MAJOR/ruby-$RUBY_VERSION.tar.gz" \
 	&& echo "$RUBY_DOWNLOAD_SHA256 *ruby.tar.gz" | sha256sum -c - \
@@ -38,11 +34,12 @@ RUN set -ex \
 	&& make -j"$(nproc)" \
 	&& make install \
 	&& apt-get purge -y --auto-remove $buildDeps \
-	&& apt-get autoremove -y && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
-	&& gem update --system $RUBYGEMS_VERSION \
+	&& apt-get autoremove -y && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+RUN gem update --system $RUBYGEMS_VERSION \
 	&& rm -r /usr/src/ruby
 
-ENV BUNDLER_VERSION 1.11.2
+ENV BUNDLER_VERSION 1.13
 
 RUN gem install bundler --version "$BUNDLER_VERSION"
 
@@ -57,28 +54,26 @@ ENV PATH $BUNDLE_BIN:$PATH
 RUN mkdir -p "$GEM_HOME" "$BUNDLE_BIN" \
 	&& chmod 777 "$GEM_HOME" "$BUNDLE_BIN"
 
+## Install Java
 RUN wget --header "Cookie: oraclelicense=accept-securebackup-cookie" http://download.oracle.com/otn-pub/java/jdk/8u112-b15/jdk-8u112-linux-x64.tar.gz \
  && mkdir /opt/jdk \
  && tar -zxf jdk-8u112-linux-x64.tar.gz -C /opt/jdk \
- && rm jdk-8u112-linux-x64.tar.gz
+ && rm jdk-8u112-linux-x64.tar.gz \
+ && update-alternatives --install /usr/bin/java java /opt/jdk/jdk1.8.0_112/bin/java 100 \
+ && update-alternatives --install /usr/bin/javac javac /opt/jdk/jdk1.8.0_112/bin/javac 100 \
+ && mkdir -p /tmp/certs \
+ && cd /tmp/certs/ \
+ && curl -O https://www.startssl.com/certs/ca.crt \
+ && curl -O https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem \
+ && /opt/jdk/jdk1.8.0_112/bin/keytool -storepasswd -new mysecretpassword -keystore /opt/jdk/jdk1.8.0_112/jre/lib/security/cacerts -storepass changeit \
+ && echo "yes" | /opt/jdk/jdk1.8.0_112/bin/keytool -import -trustcacerts -file /tmp/certs/ca.crt -alias starssl-ca -keystore /opt/jdk/jdk1.8.0_112/jre/lib/security/cacerts -storepass mysecretpassword \
+ && echo "yes" | /opt/jdk/jdk1.8.0_112/bin/keytool -import -trustcacerts -file /tmp/certs/lets-encrypt-x3-cross-signed.pem -alias letsencrypt-ca -keystore /opt/jdk/jdk1.8.0_112/jre/lib/security/cacerts -storepass mysecretpassword
 
-RUN update-alternatives --install /usr/bin/java java /opt/jdk/jdk1.8.0_112/bin/java 100 \
- && update-alternatives --install /usr/bin/javac javac /opt/jdk/jdk1.8.0_112/bin/javac 100
+RUN  gem install compass scss-lint wraith
 
-RUN gem install compass scss-lint wraith
-RUN npm install phantomjs-prebuilt -g
-RUN npm install -g protractor
-RUN npm install -g selenium
-RUN npm install -g webdriver-manager
-
-RUN mkdir -p /tmp/certs \
-    && cd /tmp/certs/ \
-    && curl -O https://www.startssl.com/certs/ca.crt \
-    && curl -O https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem
-
-RUN /opt/jdk/jdk1.8.0_112/bin/keytool -storepasswd -new mysecretpassword -keystore /opt/jdk/jdk1.8.0_112/jre/lib/security/cacerts -storepass changeit && \
-    echo "yes" | /opt/jdk/jdk1.8.0_112/bin/keytool -import -trustcacerts -file /tmp/certs/ca.crt -alias starssl-ca -keystore /opt/jdk/jdk1.8.0_112/jre/lib/security/cacerts -storepass mysecretpassword && \
-    echo "yes" | /opt/jdk/jdk1.8.0_112/bin/keytool -import -trustcacerts -file /tmp/certs/lets-encrypt-x3-cross-signed.pem -alias letsencrypt-ca -keystore /opt/jdk/jdk1.8.0_112/jre/lib/security/cacerts -storepass mysecretpassword
+# Install Npm
+RUN npm install -g yarn bower grunt-cli phantomjs-prebuilt protractor selenium webdriver-manager \
+ && echo '{ "allow_root": true }' > /root/.bowerrc
 
 # Define working directory.
 WORKDIR /data
